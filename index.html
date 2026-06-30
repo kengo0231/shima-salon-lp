@@ -142,7 +142,7 @@
 </section>
 
 <!-- ============ FEATURES ============ -->
-<section class="section features" id="features" data-tone="dark">
+<section class="section section--alt features" id="features" data-tone="light">
   <div class="wrap">
     <div class="sec-head sec-head--center reveal">
       <span class="eyebrow">5 Features</span>
@@ -231,6 +231,13 @@
       <h2 class="sec-title">サロンメンバーの声</h2>
       <p class="sec-lead">参加した経営者たちに、実際に何が起きたのか。</p>
     </div>
+    <div class="movie__frame movie__frame--compact reveal">
+      <!-- メンバー紹介動画（YouTube: bc-dGbUOXjM）。バナーをクリックで再生 -->
+      <button type="button" class="movie__placeholder movie__placeholder--banner" data-yt="bc-dGbUOXjM" aria-label="紹介動画を再生">
+        <img class="movie__banner" src="img/movie-banner.jpg" alt="バリ島でホンネで聞いた！シマサロンって？">
+        <span class="movie__play"></span>
+      </button>
+    </div>
     <div class="voice-grid">
       <article class="voice reveal d1">
         <p class="voice__text">Shima Salon に参加したことで視野が大きく広がり、嶋さんやサロン内の仲間からのアドバイスをきっかけに起業。その過程で出会った方が現在は顧問として事業をけん引してくださっています。通常の起業支援にとどまらず、海外展開を見据えた動き方まで意識できるようになり、事業の成長スピードが格段に上がりました。</p>
@@ -279,19 +286,6 @@
         </div>
         <p class="voice__events">参加イベント：シンガポール3回</p>
       </article>
-    </div>
-  </div>
-</section>
-
-<!-- ============ MEMBER MOVIE (under voices) ============ -->
-<section class="section section--alt movie" data-tone="light">
-  <div class="wrap">
-    <div class="movie__frame movie__frame--compact reveal">
-      <!-- ▼YouTubeアップ後、この .movie__placeholder--banner を YouTube iframe に差し替え（または <a href="YouTubeURL"> でラップしてクリック再生に）。動画=最終確認用.mp4（3.6GB/4K/10分のため直接ホスト不可→YouTube推奨） -->
-      <div class="movie__placeholder movie__placeholder--banner">
-        <img class="movie__banner" src="img/movie-banner.jpg" alt="バリ島でホンネで聞いた！シマサロンって？">
-        <span class="movie__play"></span>
-      </div>
     </div>
   </div>
 </section>
@@ -442,27 +436,20 @@
   </a>
 </div>
 
-<!-- ============ THEME SWITCHER ============ -->
-<div class="theme-switch" role="group" aria-label="配色テーマ切替">
-  <button type="button" data-mode="dark">ダーク</button>
-  <button type="button" data-mode="light">ライト</button>
-  <button type="button" data-mode="mixed" class="active">ミックス</button>
-</div>
-
 <script>
   // header scroll state
   const header = document.getElementById('siteHeader');
   const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 40);
   onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
 
-  // theme switcher (Dark / Light / Mixed)
-  const html = document.documentElement, body = document.body;
-  function setMode(mode) {
-    body.classList.toggle('is-mixed', mode === 'mixed');
-    html.dataset.theme = (mode === 'light') ? 'light' : 'dark';
-    document.querySelectorAll('.theme-switch button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  }
-  document.querySelectorAll('.theme-switch button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  // video facade: click banner -> load YouTube (no extra weight until played)
+  document.querySelectorAll('.movie__placeholder--banner[data-yt]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.yt;
+      const frame = btn.closest('.movie__frame');
+      frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0" title="Shima Salon 紹介動画" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%;height:100%;border:0;display:block;border-radius:20px"></iframe>';
+    });
+  });
 
   // hero image slideshow (crossfade only — no zoom/pan)
   (function () {
