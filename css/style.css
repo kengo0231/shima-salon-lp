@@ -245,7 +245,16 @@ a { color: inherit; text-decoration: none; }
 .movie__banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .movie__placeholder--banner::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.16); transition: background .3s; }
 .movie__placeholder--banner:hover::after { background: rgba(0,0,0,.04); }
-.movie__placeholder--banner .movie__play { position: relative; z-index: 2; }
+/* バナー上の再生ボタンはYouTube風（赤い角丸＋白い三角）で動画と分かりやすく */
+.movie__placeholder--banner .movie__play {
+  position: relative; z-index: 2;
+  width: 96px; height: 68px; border-radius: 18px;
+  background: #ff0000; box-shadow: 0 10px 30px rgba(0,0,0,.45);
+}
+.movie__placeholder--banner .movie__play::after {
+  border-left: 28px solid #fff; border-top: 17px solid transparent; border-bottom: 17px solid transparent; margin-left: 5px;
+}
+.movie__placeholder--banner:hover .movie__play { background: #ff1a1a; }
 .movie__frame--compact { max-width: 920px; margin: 0 auto clamp(40px, 5vw, 60px); }
 
 /* ---- responsive line breaks: desktop-only <br> + natural JP phrase wrapping ---- */
