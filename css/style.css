@@ -241,6 +241,10 @@ a { color: inherit; text-decoration: none; }
 .movie__frame:hover .movie__play { transform: scale(1.08); }
 .movie__play::after { content: ""; border-left: 22px solid #0a1428; border-top: 13px solid transparent; border-bottom: 13px solid transparent; margin-left: 6px; }
 .movie__placeholder p { color: #eaeef6; font-size: .92rem; }
+.movie__placeholder--banner { padding: 0; background: #000; }
+.movie__banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.movie__placeholder--banner::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.16); }
+.movie__placeholder--banner .movie__play { position: relative; z-index: 2; }
 .movie__placeholder .tag { font-family: "Cormorant Garamond", serif; letter-spacing: .3em; color: var(--accent-2); text-transform: uppercase; font-size: .85rem; }
 
 /* ============================================================ OVERVIEW VIDEO */
