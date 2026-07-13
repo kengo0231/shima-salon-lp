@@ -149,14 +149,19 @@ def build_grid(rows):
     cards = []
     for m in range(1, 13):
         evs = sorted(months[m], key=lambda x: x[0])
+        if not evs:
+            continue  # イベントが無い月は非表示
         lis = "".join(
             f'<li class="{cls}">{esc(name)}（{d}）</li>' for _, cls, name, d in evs
         )
         cards.append(
             f'<div class="sched reveal"><div class="sched__m latin">{m}<em>月</em></div><ul>{lis}</ul></div>'
         )
-    inner = "\n      ".join(cards)
     total = sum(len(v) for v in months.values())
+    if not cards:
+        inner = '<p style="grid-column:1/-1;text-align:center;color:var(--muted)">開催予定は準備中です。</p>'
+    else:
+        inner = "\n      ".join(cards)
     return f'<div class="sched-grid">\n      {inner}\n    </div>', total
 
 

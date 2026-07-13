@@ -162,6 +162,7 @@ function shima_build_grid($rows, $year, $exclude, $overseas) {
 
     $cards = array();
     for ($m = 1; $m <= 12; $m++) {
+        if (empty($months[$m])) continue; // イベントが無い月は非表示
         usort($months[$m], function ($a, $b) { return strcmp($a['start'], $b['start']); });
         $lis = '';
         foreach ($months[$m] as $e) {
@@ -170,6 +171,9 @@ function shima_build_grid($rows, $year, $exclude, $overseas) {
                   . '（' . htmlspecialchars($e['d'], ENT_QUOTES, 'UTF-8') . '）</li>';
         }
         $cards[] = '<div class="sched reveal"><div class="sched__m latin">' . $m . '<em>月</em></div><ul>' . $lis . '</ul></div>';
+    }
+    if (empty($cards)) {
+        return '<div class="sched-grid"><p style="grid-column:1/-1;text-align:center;color:var(--muted)">開催予定は準備中です。</p></div>';
     }
     return "<div class=\"sched-grid\">\n      " . implode("\n      ", $cards) . "\n    </div>";
 }
