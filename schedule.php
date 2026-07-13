@@ -22,8 +22,10 @@ echo shima_schedule_html($SCHEDULE_TOKEN, $SCHEDULE_DB, $SCHEDULE_YEAR,
 
 
 function shima_schedule_html($token, $db, $year, $exclude, $overseas, $ttl, $cache) {
+    // URL に ?refresh=1 を付けるとキャッシュを無視して即時再取得（動作確認・即反映用）
+    $force = !empty($_GET['refresh']);
     // 1) 新しいキャッシュがあれば即返す
-    if (is_file($cache) && (time() - filemtime($cache) < $ttl)) {
+    if (!$force && is_file($cache) && (time() - filemtime($cache) < $ttl)) {
         $c = @file_get_contents($cache);
         if ($c !== false && $c !== '') return $c;
     }
