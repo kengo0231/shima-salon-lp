@@ -1,0 +1,45 @@
+name: Notion開催スケジュール同期
+
+# 毎日 06:00 JST に Notion からスケジュールを取得して index.html を更新。
+# 手動実行（Actions タブの Run workflow）も可能。
+# トークンはリポジトリの Secrets（NOTION_TOKEN）から供給し、コードには含めない。
+
+on:
+  schedule:
+    - cron: "0 21 * * *"   # 21:00 UTC = 翌 06:00 JST
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-schedule
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: NotionからスケジュールをHTMLへ反映
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python3 scripts/sync_schedule.py
+
+      - name: 変更があればコミット＆プッシュ
+        run: |
+          if [ -n "$(git status --porcelain index.html)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "chore: Notion開催スケジュールを自動同期"
+            git push
+            echo "スケジュールを更新しました"
+          else
+            echo "変更なし（同期済み）"
+          fi
