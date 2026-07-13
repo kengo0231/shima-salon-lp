@@ -21,7 +21,8 @@ import json
 import subprocess
 
 DB_ID = "2bf255fa-038d-80e7-b48c-e68fe27c39bc"   # サロンイベントスケジュール（公開情報・非機密）
-YEAR = os.environ.get("SCHEDULE_YEAR", "2026")   # 掲載対象年（見出しと一致させる）
+# 掲載対象年（カンマ区切り・記載順に表示）。例: "2026,2027"
+YEARS = [y.strip() for y in os.environ.get("SCHEDULE_YEARS", "2026,2027").split(",") if y.strip()]
 NOTION_VERSION = "2022-06-28"
 DATE_PROP = "開催期間"
 TYPE_PROP = "イベントタイプ"
@@ -126,43 +127,52 @@ def esc(s):
 
 
 def build_grid(rows):
-    months = {m: [] for m in range(1, 13)}
+    # 年 -> {月: [events]}
+    data = {y: {m: [] for m in range(1, 13)} for y in YEARS}
+    total = 0
     for r in rows:
         props = r.get("properties", {})
         date = props.get(DATE_PROP, {}).get("date")
         if not date or not date.get("start"):
             continue
         start = date["start"]
-        if start[:4] != YEAR:
+        year = start[:4]
+        if year not in data:
             continue
-        month = int(start[5:7])
-        raw_name = title_text(props.get("イベント名"))
         sel = props.get(TYPE_PROP, {}).get("select")
         ev_type = sel["name"] if sel else ""
         if ev_type in EXCLUDE_TYPES:
             continue
+        raw_name = title_text(props.get("イベント名"))
         name = clean_name(raw_name)
         cls = classify(raw_name, ev_type)
         d = "日程調整中" if "未定" in raw_name else fmt_date(start, date.get("end"))
-        months[month].append((start, cls, name, d))
+        data[year][int(start[5:7])].append((start, cls, name, d))
+        total += 1
 
-    cards = []
-    for m in range(1, 13):
-        evs = sorted(months[m], key=lambda x: x[0])
-        if not evs:
-            continue  # イベントが無い月は非表示
-        lis = "".join(
-            f'<li class="{cls}">{esc(name)}（{d}）</li>' for _, cls, name, d in evs
+    blocks = []
+    for year in YEARS:
+        cards = []
+        for m in range(1, 13):
+            evs = sorted(data[year][m], key=lambda x: x[0])
+            if not evs:
+                continue  # イベントが無い月は非表示
+            lis = "".join(
+                f'<li class="{cls}">{esc(name)}（{d}）</li>' for _, cls, name, d in evs
+            )
+            cards.append(
+                f'<div class="sched reveal"><div class="sched__m latin">{m}<em>月</em></div><ul>{lis}</ul></div>'
+            )
+        if not cards:
+            continue  # イベントが無い年は非表示
+        grid = '<div class="sched-grid">\n        ' + "\n        ".join(cards) + "\n      </div>"
+        blocks.append(
+            f'<div class="sched-year-block reveal">\n      <h3 class="sched-year latin">{year}<span>年</span></h3>\n      {grid}\n    </div>'
         )
-        cards.append(
-            f'<div class="sched reveal"><div class="sched__m latin">{m}<em>月</em></div><ul>{lis}</ul></div>'
-        )
-    total = sum(len(v) for v in months.values())
-    if not cards:
-        inner = '<p style="grid-column:1/-1;text-align:center;color:var(--muted)">開催予定は準備中です。</p>'
-    else:
-        inner = "\n      ".join(cards)
-    return f'<div class="sched-grid">\n      {inner}\n    </div>', total
+
+    if not blocks:
+        return '<div class="sched-grid"><p style="grid-column:1/-1;text-align:center;color:var(--muted)">開催予定は準備中です。</p></div>', 0
+    return "\n    ".join(blocks), total
 
 
 def main():
@@ -179,11 +189,11 @@ def main():
     new_doc = pattern.sub(new_block, doc)
 
     if new_doc == doc:
-        print(f"変更なし（{YEAR}年 {total}件）")
+        print(f"変更なし（{'/'.join(YEARS)}年 {total}件）")
         return
     with open(INDEX, "w", encoding="utf-8") as f:
         f.write(new_doc)
-    print(f"更新しました: {YEAR}年 {total}件 をスケジュールに反映")
+    print(f"更新しました: {'/'.join(YEARS)}年 {total}件 をスケジュールに反映")
 
 
 if __name__ == "__main__":

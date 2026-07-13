@@ -10,18 +10,18 @@
 // ===== 設定 =====
 $SCHEDULE_TOKEN    = @include __DIR__ . '/notion-config.php';   // トークン文字列を返すファイル
 $SCHEDULE_DB       = '2bf255fa-038d-80e7-b48c-e68fe27c39bc';    // サロンイベントスケジュール（非機密）
-$SCHEDULE_YEAR     = '2026';                                    // 掲載年（見出しと一致させる）
+$SCHEDULE_YEARS    = array('2026', '2027');                     // 掲載年（記載順に年ごとに表示）
 $SCHEDULE_EXCLUDE  = array('ウェビナー', '健康管理');           // 非掲載のイベントタイプ
 $SCHEDULE_OVERSEAS = array('海外視察', '海外アテンド');         // 青（海外）扱いのタイプ
 $SCHEDULE_TTL      = 3600;                                      // キャッシュ有効秒数（1時間）
 $SCHEDULE_CACHE    = __DIR__ . '/cache/schedule.html';
 
 // ===== 実処理（関数定義は下部） =====
-echo shima_schedule_html($SCHEDULE_TOKEN, $SCHEDULE_DB, $SCHEDULE_YEAR,
+echo shima_schedule_html($SCHEDULE_TOKEN, $SCHEDULE_DB, $SCHEDULE_YEARS,
     $SCHEDULE_EXCLUDE, $SCHEDULE_OVERSEAS, $SCHEDULE_TTL, $SCHEDULE_CACHE);
 
 
-function shima_schedule_html($token, $db, $year, $exclude, $overseas, $ttl, $cache) {
+function shima_schedule_html($token, $db, $years, $exclude, $overseas, $ttl, $cache) {
     // URL に ?refresh=1 を付けるとキャッシュを無視して即時再取得（動作確認・即反映用）
     $force = !empty($_GET['refresh']);
     // 1) 新しいキャッシュがあれば即返す
@@ -34,7 +34,7 @@ function shima_schedule_html($token, $db, $year, $exclude, $overseas, $ttl, $cac
     if (is_string($token) && $token !== '') {
         $rows = shima_notion_fetch_all($token, $db);
         if ($rows !== null) {
-            $html = shima_build_grid($rows, $year, $exclude, $overseas);
+            $html = shima_build_grid($rows, $years, $exclude, $overseas);
             @mkdir(dirname($cache), 0755, true);
             @file_put_contents($cache, $html, LOCK_EX);
         }
@@ -139,16 +139,20 @@ function shima_fmt_date($start, $end) {
     return "$sm/$sd";
 }
 
-function shima_build_grid($rows, $year, $exclude, $overseas) {
-    $months = array();
-    for ($m = 1; $m <= 12; $m++) $months[$m] = array();
-
+function shima_build_grid($rows, $years, $exclude, $overseas) {
+    // 年 => 月 => events
+    $data = array();
+    foreach ($years as $y) {
+        $data[$y] = array();
+        for ($m = 1; $m <= 12; $m++) $data[$y][$m] = array();
+    }
     foreach ($rows as $r) {
         $props = isset($r['properties']) ? $r['properties'] : array();
         $date  = isset($props['開催期間']['date']) ? $props['開催期間']['date'] : null;
         if (!$date || empty($date['start'])) continue;
         $start = $date['start'];
-        if (substr($start, 0, 4) !== $year) continue;
+        $year  = substr($start, 0, 4);
+        if (!isset($data[$year])) continue;
         $type = isset($props['イベントタイプ']['select']['name']) ? $props['イベントタイプ']['select']['name'] : '';
         if (in_array($type, $exclude, true)) continue;
 
@@ -157,23 +161,29 @@ function shima_build_grid($rows, $year, $exclude, $overseas) {
         $name = shima_clean_name($raw);
         $cls  = shima_classify($raw, $type, $overseas);
         $d    = (strpos($raw, '未定') !== false) ? '日程調整中' : shima_fmt_date($start, isset($date['end']) ? $date['end'] : null);
-        $months[$m][] = array('start' => $start, 'cls' => $cls, 'name' => $name, 'd' => $d);
+        $data[$year][$m][] = array('start' => $start, 'cls' => $cls, 'name' => $name, 'd' => $d);
     }
 
-    $cards = array();
-    for ($m = 1; $m <= 12; $m++) {
-        if (empty($months[$m])) continue; // イベントが無い月は非表示
-        usort($months[$m], function ($a, $b) { return strcmp($a['start'], $b['start']); });
-        $lis = '';
-        foreach ($months[$m] as $e) {
-            $lis .= '<li class="' . $e['cls'] . '">'
-                  . htmlspecialchars($e['name'], ENT_QUOTES, 'UTF-8')
-                  . '（' . htmlspecialchars($e['d'], ENT_QUOTES, 'UTF-8') . '）</li>';
+    $blocks = array();
+    foreach ($years as $year) {
+        $cards = array();
+        for ($m = 1; $m <= 12; $m++) {
+            if (empty($data[$year][$m])) continue; // イベントが無い月は非表示
+            usort($data[$year][$m], function ($a, $b) { return strcmp($a['start'], $b['start']); });
+            $lis = '';
+            foreach ($data[$year][$m] as $e) {
+                $lis .= '<li class="' . $e['cls'] . '">'
+                      . htmlspecialchars($e['name'], ENT_QUOTES, 'UTF-8')
+                      . '（' . htmlspecialchars($e['d'], ENT_QUOTES, 'UTF-8') . '）</li>';
+            }
+            $cards[] = '<div class="sched reveal"><div class="sched__m latin">' . $m . '<em>月</em></div><ul>' . $lis . '</ul></div>';
         }
-        $cards[] = '<div class="sched reveal"><div class="sched__m latin">' . $m . '<em>月</em></div><ul>' . $lis . '</ul></div>';
+        if (empty($cards)) continue; // イベントが無い年は非表示
+        $grid = "<div class=\"sched-grid\">\n        " . implode("\n        ", $cards) . "\n      </div>";
+        $blocks[] = "<div class=\"sched-year-block reveal\">\n      <h3 class=\"sched-year latin\">" . htmlspecialchars($year, ENT_QUOTES, 'UTF-8') . "<span>年</span></h3>\n      " . $grid . "\n    </div>";
     }
-    if (empty($cards)) {
+    if (empty($blocks)) {
         return '<div class="sched-grid"><p style="grid-column:1/-1;text-align:center;color:var(--muted)">開催予定は準備中です。</p></div>';
     }
-    return "<div class=\"sched-grid\">\n      " . implode("\n      ", $cards) . "\n    </div>";
+    return implode("\n    ", $blocks);
 }
