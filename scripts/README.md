@@ -24,6 +24,28 @@ NOTION_TOKEN=xxxxxxxx python3 scripts/sync_schedule.py
   例）ウェビナーも載せる → `SCHEDULE_EXCLUDE_TYPES="健康管理"`
 - 海外（青ドット）判定: イベント名の国旗絵文字、または種別 `海外視察 / 海外アテンド`。
 
+## お名前.com（PHP）で自動同期する場合
+GitHub / FTP再アップを使わず、**お名前.comサーバー単体で自動同期**する方式。ページ表示時に
+`schedule.php` がNotionを取得（1時間キャッシュ）してスケジュールを描画する。Notionを更新すれば
+最大1時間以内に自動反映され、再アップロードは不要。
+
+### FTP でアップロードするファイル（Web公開領域へ）
+```
+index.php            ← index.html の代わりにこちら（schedule.php を include）
+schedule.php         ← Notion取得＋キャッシュ＋グリッド生成
+notion-config.php    ← Notionトークン（1行）。※GitHub非コミット・直接アクセス禁止
+.htaccess            ← index.php優先・notion-config.php保護・ディレクトリ一覧禁止
+css/  img/           ← そのまま
+```
+- **index.html はアップしない**（.htaccess で index.php を優先するが、混同を避けるため）。
+- `scripts/` `.github/` `cache/` はアップ不要（`cache/` は初回表示時にPHPが自動生成）。
+- 前提: プランで **PHP が使え、PHPから外部HTTPS（curl/allow_url_fopen）が可能**なこと。
+
+### 運用
+- Notion で予定を編集 → 最大1時間で反映（`schedule.php` の `$SCHEDULE_TTL` で調整可）。
+- LPのデザイン/文言を変えたら `python3 scripts/build_onamae.py` で **index.php を作り直して**再アップ。
+- トークンを変えたら `notion-config.php` の1行を差し替えて再アップ。
+
 ## Notion DB のマッピング
 | LP表示 | Notion プロパティ |
 |---|---|

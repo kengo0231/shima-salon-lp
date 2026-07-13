@@ -1,2 +1,7 @@
 .DS_Store
 **/.DS_Store
+
+# お名前.com PHP方式のローカル成果物（コミットしない）
+notion-config.php
+index.php
+cache/

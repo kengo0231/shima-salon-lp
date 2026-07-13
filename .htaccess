@@ -1,0 +1,18 @@
+# Shima Salon LP（お名前.com 等 Apache 用）
+
+# index.php を優先（index.html が同居していても動的版を表示）
+DirectoryIndex index.php index.html
+
+# ディレクトリ一覧表示を無効化
+Options -Indexes
+
+# Notion トークン設定ファイルへの直接アクセスを禁止
+<Files "notion-config.php">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</Files>
